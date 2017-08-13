@@ -2,12 +2,13 @@
 ### example
 - You can use it like
 ```
-BookDaoImpl.java
-
-public class BookDaoImpl extends BaseDaoImpl<Book> implements IBookDao {
-
+public class UserDaoImpl extends BaseDaoImpl<User>implements UserDao{
+	public UserDaoImpl() {
+		super(User.class);
+	}
 }
-interface IBookDao extends BaseDao<Book>{
+
+public interface UserDao extends BaseDao<User>{
 
 }
 ```

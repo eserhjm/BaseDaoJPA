@@ -1,38 +1,83 @@
 public abstract class BaseDaoImpl<T> implements BaseDao<T>{
-	private Class<T> persistentClass;
+private Class<T> persistentClass;
 
-	@SuppressWarnings("unchecked")
-	public BaseDaoImpl() {
-		this.persistentClass = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+	public BaseDaoImpl(Class<T> clz) {
+		this.persistentClass = clz;
 	}
 
-	@Autowired
+	@PersistenceContext
 	private EntityManager em;
 	
+	public EntityManager getEm() {
+		return em;
+	}
+
+	public void setEm(EntityManager em) {
+		this.em = em;
+	}
+
 	@Override
 	public T insert(T t) {
-		EntityTransaction tx=em.getTransaction();
-		tx.begin();
 		em.persist(t);
-		tx.commit();
-		return findByExample(t).get(0);
+		return t;
 	}
 
 	@Override
 	public T update(T t) {
-		EntityTransaction tx=em.getTransaction();
-		tx.begin();
 		em.merge(t);
-		tx.commit();
-		return findByExample(t).get(0);
+		return t;
 	}
 
+	@Override
+	public T queryById(Object id) {
+		return em.find(persistentClass, id);
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<T> queryAll() {
 	    return em.createQuery("Select t from " + persistentClass.getSimpleName() + " t").getResultList();
 	}
-	 
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public List<T> findByExample(T example) {    
+		System.out.println(example);
+	    Session session = (Session) em.getDelegate();
+	    Example ex = Example.create(example);
+	    Criteria c = session.createCriteria(persistentClass).add(ex);
+	    return c.list();
+	}
+
+	@Override
+	public boolean deleteByExample(T example) {
+		List<T> t=findByExample(example);
+		for (T t2 : t) {
+			em.remove(t2);
+		}
+		return true;
+	}
+
+	@Override
+	public boolean deleteById(Object id) {
+		try{
+			T t = em.find(persistentClass, id);
+			em.remove(t);
+			return true;
+		}catch(Exception e){
+			return false;
+		}
+	}
+
+	@Override
+	public boolean deleteAll() {
+		List<T> t=queryAll();
+		for (T t2 : t) {
+			em.remove(t2);;
+		}
+		return true;
+	}
+	
 	@Override
 	public boolean isExist(T t) {
 		List<T> list=findByExample(t);
@@ -42,23 +87,17 @@ public abstract class BaseDaoImpl<T> implements BaseDao<T>{
 		return false;
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
-	public List<T> findByExample(T example) {    
-		Class<T> entityClass =(Class<T>) example.getClass();
-	    Session session = (Session) em.getDelegate();
-	    Example ex = Example.create(example);
-	    Criteria c = session.createCriteria(entityClass).add(ex);
-	    return c.list();
+	public boolean isExistById(Object id) {
+		T t=queryById(id);
+		if(t!=null){
+			return true;
+		}
+		return false;
 	}
 
 	@Override
-	public boolean deletByExample(T example) {
-		EntityTransaction tx=em.getTransaction();
-		tx.begin();
-		T t=findByExample(example).get(0);
-		em.remove(t);
-		tx.commit();
-		return findByExample(example).size()==0;
+	public long size() {
+		return em.createQuery("Select t from " + persistentClass.getSimpleName() + " t").getResultList().size();
 	}
 }
